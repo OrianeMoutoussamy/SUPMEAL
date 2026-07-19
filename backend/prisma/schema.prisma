@@ -1,0 +1,130 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum CookbookRole {
+  OWNER
+  EDITOR
+  COMMENTER
+  READER
+}
+
+model User {
+  id              String           @id @default(uuid())
+  email           String           @unique
+  passwordHash    String
+  displayName     String
+  dietaryPreferences String[]      @default([])
+  allergies       String[]         @default([])
+  favoriteCuisines String[]        @default([])
+  defaultServings Int              @default(2)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  ownedCookbooks  Cookbook[]       @relation("CookbookOwner")
+  memberships     CookbookMember[]
+  recipes         Recipe[]         @relation("RecipeAuthor")
+  comments        Comment[]
+  messages        Message[]
+  mealPlans       MealPlan[]
+  favorites       Favorite[]
+}
+
+model Cookbook {
+  id          String           @id @default(uuid())
+  name        String
+  description String?
+  ownerId     String
+  owner       User             @relation("CookbookOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members     CookbookMember[]
+  recipes     Recipe[]
+  messages    Message[]
+  mealPlans   MealPlan[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model CookbookMember {
+  id         String       @id @default(uuid())
+  cookbookId String
+  userId     String
+  role       CookbookRole @default(READER)
+  cookbook   Cookbook     @relation(fields: [cookbookId], references: [id], onDelete: Cascade)
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime     @default(now())
+
+  @@unique([cookbookId, userId])
+}
+
+model Recipe {
+  id                 String       @id @default(uuid())
+  title              String
+  description        String?
+  preparationMinutes Int
+  cookingMinutes     Int
+  servings           Int
+  imageUrl            String?
+  sourceUrl           String?
+  ingredients        Json
+  steps              Json
+  tags                String[]     @default([])
+  authorId            String
+  cookbookId          String?
+  author              User         @relation("RecipeAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  cookbook            Cookbook?    @relation(fields: [cookbookId], references: [id], onDelete: Cascade)
+  comments            Comment[]
+  favorites           Favorite[]
+  mealPlans           MealPlan[]
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+}
+
+model Favorite {
+  id       String @id @default(uuid())
+  userId   String
+  recipeId String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipe   Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, recipeId])
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  content   String
+  recipeId  String
+  authorId  String
+  recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Message {
+  id         String   @id @default(uuid())
+  content    String
+  cookbookId String
+  authorId   String
+  cookbook   Cookbook @relation(fields: [cookbookId], references: [id], onDelete: Cascade)
+  author     User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+}
+
+model MealPlan {
+  id         String   @id @default(uuid())
+  plannedFor DateTime
+  mealType   String
+  servings   Int
+  notes      String?
+  recipeId   String
+  userId     String
+  cookbookId String?
+  recipe     Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cookbook   Cookbook? @relation(fields: [cookbookId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+}

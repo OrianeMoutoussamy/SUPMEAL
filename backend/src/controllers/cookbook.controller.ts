@@ -1,0 +1,10 @@
+import { Request, Response } from 'express';
+import { prisma } from '../config/database';
+import { AppError } from '../utils/app-error';
+import { requireCookbookRole } from '../services/access.service';
+export async function listCookbooks(req:Request,res:Response){ const items=await prisma.cookbook.findMany({where:{OR:[{ownerId:req.user!.id},{members:{some:{userId:req.user!.id}}}]},include:{_count:{select:{recipes:true,members:true}}},orderBy:{updatedAt:'desc'}});res.json({success:true,data:items});}
+export async function getCookbook(req:Request,res:Response){await requireCookbookRole(req.params.id!,req.user!.id,'READER');const item=await prisma.cookbook.findUniqueOrThrow({where:{id:req.params.id},include:{members:{include:{user:{select:{id:true,email:true,displayName:true}}}},recipes:true}});res.json({success:true,data:item});}
+export async function createCookbook(req:Request,res:Response){const item=await prisma.cookbook.create({data:{...req.body,ownerId:req.user!.id}});res.status(201).json({success:true,data:item});}
+export async function updateCookbook(req:Request,res:Response){await requireCookbookRole(req.params.id!,req.user!.id,'OWNER');const item=await prisma.cookbook.update({where:{id:req.params.id},data:req.body});res.json({success:true,data:item});}
+export async function deleteCookbook(req:Request,res:Response){await requireCookbookRole(req.params.id!,req.user!.id,'OWNER');await prisma.cookbook.delete({where:{id:req.params.id}});res.status(204).send();}
+export async function addMember(req:Request,res:Response){await requireCookbookRole(req.params.id!,req.user!.id,'OWNER');const user=await prisma.user.findUnique({where:{email:req.body.email.toLowerCase()}});if(!user)throw new AppError(404,'Aucun utilisateur ne correspond à cette adresse e-mail.');const member=await prisma.cookbookMember.upsert({where:{cookbookId_userId:{cookbookId:req.params.id!,userId:user.id}},update:{role:req.body.role},create:{cookbookId:req.params.id!,userId:user.id,role:req.body.role}});res.status(201).json({success:true,data:member});}

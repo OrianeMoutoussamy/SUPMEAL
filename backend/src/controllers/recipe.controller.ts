@@ -4,10 +4,6 @@ import { prisma } from '../config/database';
 import { AppError } from '../utils/app-error';
 import { requireCookbookRole } from '../services/access.service';
 
-type RecipeParams = {
-    id: string;
-};
-
 async function requireRecipeEdit(id: string, userId: string) {
     const recipe = await prisma.recipe.findUnique({
         where: {
@@ -16,7 +12,10 @@ async function requireRecipeEdit(id: string, userId: string) {
     });
 
     if (!recipe) {
-        throw new AppError(404, 'La recette est introuvable.');
+        throw new AppError(
+            404,
+            'La recette est introuvable.'
+        );
     }
 
     if (recipe.authorId !== userId) {
@@ -49,7 +48,9 @@ export async function listRecipes(req: Request, res: Response) {
         where: {
             AND: [
                 cookbookId
-                    ? { cookbookId }
+                    ? {
+                        cookbookId,
+                    }
                     : {},
 
                 tag
@@ -119,7 +120,6 @@ export async function listRecipes(req: Request, res: Response) {
                 },
             ],
         },
-
         include: {
             favorites: {
                 where: {
@@ -132,13 +132,12 @@ export async function listRecipes(req: Request, res: Response) {
                 },
             },
         },
-
         orderBy: {
             updatedAt: 'desc',
         },
     });
 
-    const data = items.map(({ favorites, ...recipe }: typeof items[0]) => ({
+    const data = items.map(({ favorites, ...recipe }: typeof items[number]) => ({
         ...recipe,
         isFavorite: favorites.length > 0,
     }));
@@ -149,11 +148,8 @@ export async function listRecipes(req: Request, res: Response) {
     });
 }
 
-export async function getRecipe(
-    req: Request<RecipeParams>,
-    res: Response
-) {
-    const { id } = req.params;
+export async function getRecipe(req: Request, res: Response) {
+    const id = String(req.params.id);
 
     const item = await prisma.recipe.findUnique({
         where: {
@@ -221,10 +217,7 @@ export async function getRecipe(
     });
 }
 
-export async function createRecipe(
-    req: Request,
-    res: Response
-) {
+export async function createRecipe(req: Request, res: Response) {
     if (req.body.cookbookId) {
         await requireCookbookRole(
             req.body.cookbookId,
@@ -246,11 +239,8 @@ export async function createRecipe(
     });
 }
 
-export async function updateRecipe(
-    req: Request<RecipeParams>,
-    res: Response
-) {
-    const { id } = req.params;
+export async function updateRecipe(req: Request, res: Response) {
+    const id = String(req.params.id);
 
     await requireRecipeEdit(
         id,
@@ -270,11 +260,8 @@ export async function updateRecipe(
     });
 }
 
-export async function deleteRecipe(
-    req: Request<RecipeParams>,
-    res: Response
-) {
-    const { id } = req.params;
+export async function deleteRecipe(req: Request, res: Response) {
+    const id = String(req.params.id);
 
     await requireRecipeEdit(
         id,
@@ -290,11 +277,8 @@ export async function deleteRecipe(
     res.status(204).send();
 }
 
-export async function toggleFavorite(
-    req: Request<RecipeParams>,
-    res: Response
-) {
-    const { id } = req.params;
+export async function toggleFavorite(req: Request, res: Response) {
+    const id = String(req.params.id);
 
     const where = {
         userId_recipeId: {
@@ -337,11 +321,8 @@ export async function toggleFavorite(
     });
 }
 
-export async function addComment(
-    req: Request<RecipeParams>,
-    res: Response
-) {
-    const { id } = req.params;
+export async function addComment(req: Request, res: Response) {
+    const id = String(req.params.id);
 
     const recipe = await prisma.recipe.findUnique({
         where: {

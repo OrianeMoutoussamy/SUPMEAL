@@ -4,48 +4,49 @@ import { prisma } from '../config/database';
 import { AppError } from '../utils/app-error';
 import { requireCookbookRole } from '../services/access.service';
 
-type CookbookParams = {
-    id: string;
-};
-
 export async function listCookbooks(req: Request, res: Response) {
     const items = await prisma.cookbook.findMany({
         where: {
             OR: [
-                { ownerId: req.user!.id },
-                { members: { some: { userId: req.user!.id } } }
-            ]
+                {
+                    ownerId: req.user!.id,
+                },
+                {
+                    members: {
+                        some: {
+                            userId: req.user!.id,
+                        },
+                    },
+                },
+            ],
         },
         include: {
             _count: {
                 select: {
                     recipes: true,
-                    members: true
-                }
-            }
+                    members: true,
+                },
+            },
         },
         orderBy: {
-            updatedAt: 'desc'
-        }
+            updatedAt: 'desc',
+        },
     });
 
     res.json({
         success: true,
-        data: items
+        data: items,
     });
 }
 
-export async function getCookbook(
-    req: Request<CookbookParams>,
-    res: Response
-) {
-    const { id } = req.params;
+export async function getCookbook(req: Request, res: Response) {
+    const id = String(req.params.id);
 
     await requireCookbookRole(id, req.user!.id, 'READER');
 
     const item = await prisma.cookbook.findUniqueOrThrow({
         where: {
-            id
+            id,
         },
         include: {
             members: {
@@ -54,18 +55,18 @@ export async function getCookbook(
                         select: {
                             id: true,
                             email: true,
-                            displayName: true
-                        }
-                    }
-                }
+                            displayName: true,
+                        },
+                    },
+                },
             },
-            recipes: true
-        }
+            recipes: true,
+        },
     });
 
     res.json({
         success: true,
-        data: item
+        data: item,
     });
 }
 
@@ -73,66 +74,57 @@ export async function createCookbook(req: Request, res: Response) {
     const item = await prisma.cookbook.create({
         data: {
             ...req.body,
-            ownerId: req.user!.id
-        }
+            ownerId: req.user!.id,
+        },
     });
 
     res.status(201).json({
         success: true,
-        data: item
+        data: item,
     });
 }
 
-export async function updateCookbook(
-    req: Request<CookbookParams>,
-    res: Response
-) {
-    const { id } = req.params;
+export async function updateCookbook(req: Request, res: Response) {
+    const id = String(req.params.id);
 
     await requireCookbookRole(id, req.user!.id, 'OWNER');
 
     const item = await prisma.cookbook.update({
         where: {
-            id
+            id,
         },
-        data: req.body
+        data: req.body,
     });
 
     res.json({
         success: true,
-        data: item
+        data: item,
     });
 }
 
-export async function deleteCookbook(
-    req: Request<CookbookParams>,
-    res: Response
-) {
-    const { id } = req.params;
+export async function deleteCookbook(req: Request, res: Response) {
+    const id = String(req.params.id);
 
     await requireCookbookRole(id, req.user!.id, 'OWNER');
 
     await prisma.cookbook.delete({
         where: {
-            id
-        }
+            id,
+        },
     });
 
     res.status(204).send();
 }
 
-export async function addMember(
-    req: Request<CookbookParams>,
-    res: Response
-) {
-    const { id } = req.params;
+export async function addMember(req: Request, res: Response) {
+    const id = String(req.params.id);
 
     await requireCookbookRole(id, req.user!.id, 'OWNER');
 
     const user = await prisma.user.findUnique({
         where: {
-            email: req.body.email.toLowerCase()
-        }
+            email: req.body.email.toLowerCase(),
+        },
     });
 
     if (!user) {
@@ -146,21 +138,21 @@ export async function addMember(
         where: {
             cookbookId_userId: {
                 cookbookId: id,
-                userId: user.id
-            }
+                userId: user.id,
+            },
         },
         update: {
-            role: req.body.role
+            role: req.body.role,
         },
         create: {
             cookbookId: id,
             userId: user.id,
-            role: req.body.role
-        }
+            role: req.body.role,
+        },
     });
 
     res.status(201).json({
         success: true,
-        data: member
+        data: member,
     });
 }

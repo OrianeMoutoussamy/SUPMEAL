@@ -2,10 +2,6 @@ import { Request, Response } from 'express';
 
 import { prisma } from '../config/database';
 
-type MealPlanParams = {
-    id: string;
-};
-
 export async function listMealPlans(req: Request, res: Response) {
     const items = await prisma.mealPlan.findMany({
         where: {
@@ -43,11 +39,8 @@ export async function createMealPlan(req: Request, res: Response) {
     });
 }
 
-export async function deleteMealPlan(
-    req: Request<MealPlanParams>,
-    res: Response
-) {
-    const { id } = req.params;
+export async function deleteMealPlan(req: Request, res: Response) {
+    const id = String(req.params.id);
 
     await prisma.mealPlan.delete({
         where: {

@@ -1,0 +1,14 @@
+import express from 'express';
+import cors from 'cors';
+import swaggerUi from 'swagger-ui-express';
+import routes from './routes';
+import { env } from './config/env';
+import { swaggerDocument } from './config/swagger';
+import { errorHandler, notFound } from './middlewares/error.middleware';
+export const app=express();
+app.disable('x-powered-by');
+app.use(cors({origin:env.frontendUrl,credentials:true}));
+app.use(express.json({limit:'2mb'}));
+app.use('/api/docs',swaggerUi.serve,swaggerUi.setup(swaggerDocument));
+app.use('/api',routes);
+app.use(notFound);app.use(errorHandler);

@@ -1,14 +1,193 @@
 import Joi from 'joi';
+
 const uuid = Joi.string().uuid();
-export const registerSchema = Joi.object({ body: Joi.object({ email: Joi.string().email().required(), password: Joi.string().min(8).max(128).pattern(/[A-Z]/).pattern(/[a-z]/).pattern(/[0-9]/).required(), displayName: Joi.string().min(2).max(80).required() }).required(), params: Joi.object(), query: Joi.object() });
-export const loginSchema = Joi.object({ body: Joi.object({ email: Joi.string().email().required(), password: Joi.string().required() }).required(), params: Joi.object(), query: Joi.object() });
-export const idSchema = Joi.object({ body: Joi.object(), params: Joi.object({ id: uuid.required() }), query: Joi.object() });
-export const cookbookSchema = Joi.object({ body: Joi.object({ name: Joi.string().min(2).max(120).required(), description: Joi.string().max(1000).allow('', null) }).required(), params: Joi.object(), query: Joi.object() });
-export const cookbookUpdateSchema = Joi.object({ body: Joi.object({ name: Joi.string().min(2).max(120), description: Joi.string().max(1000).allow('', null) }).min(1).required(), params: Joi.object({ id: uuid.required() }), query: Joi.object() });
-export const memberSchema = Joi.object({ body: Joi.object({ email: Joi.string().email().required(), role: Joi.string().valid('EDITOR','COMMENTER','READER').required() }).required(), params: Joi.object({ id: uuid.required() }), query: Joi.object() });
-const ingredient = Joi.object({ name: Joi.string().required(), quantity: Joi.number().positive().required(), unit: Joi.string().max(30).required() });
-export const recipeSchema = Joi.object({ body: Joi.object({ title: Joi.string().min(2).max(150).required(), description: Joi.string().max(2000).allow('', null), preparationMinutes: Joi.number().integer().min(0).required(), cookingMinutes: Joi.number().integer().min(0).required(), servings: Joi.number().integer().min(1).required(), imageUrl: Joi.string().uri().allow('', null), sourceUrl: Joi.string().uri().allow('', null), ingredients: Joi.array().items(ingredient).min(1).required(), steps: Joi.array().items(Joi.string().min(1)).min(1).required(), tags: Joi.array().items(Joi.string().max(40)).default([]), cookbookId: uuid.allow(null) }).required(), params: Joi.object(), query: Joi.object() });
-export const recipeUpdateSchema = Joi.object({ body: recipeSchema.extract('body').fork(['title','preparationMinutes','cookingMinutes','servings','ingredients','steps'], (s) => s.optional()).min(1), params: Joi.object({ id: uuid.required() }), query: Joi.object() });
-export const commentSchema = Joi.object({ body: Joi.object({ content: Joi.string().min(1).max(2000).required() }).required(), params: Joi.object({ id: uuid.required() }), query: Joi.object() });
-export const mealPlanSchema = Joi.object({ body: Joi.object({ plannedFor: Joi.date().iso().required(), mealType: Joi.string().max(50).required(), servings: Joi.number().integer().min(1).required(), notes: Joi.string().max(1000).allow('', null), recipeId: uuid.required(), cookbookId: uuid.allow(null) }).required(), params: Joi.object(), query: Joi.object() });
-export const profileSchema = Joi.object({ body: Joi.object({ displayName: Joi.string().min(2).max(80), dietaryPreferences: Joi.array().items(Joi.string().max(60)), allergies: Joi.array().items(Joi.string().max(60)), favoriteCuisines: Joi.array().items(Joi.string().max(60)), defaultServings: Joi.number().integer().min(1).max(50) }).min(1).required(), params: Joi.object(), query: Joi.object() });
+
+export const registerSchema = Joi.object({
+    body: Joi.object({
+        email: Joi.string().email().required(),
+        password: Joi.string()
+            .min(8)
+            .max(128)
+            .pattern(/[A-Z]/)
+            .pattern(/[a-z]/)
+            .pattern(/[0-9]/)
+            .required(),
+        displayName: Joi.string().min(2).max(80).required(),
+    }).required(),
+    params: Joi.object(),
+    query: Joi.object(),
+});
+
+export const loginSchema = Joi.object({
+    body: Joi.object({
+        email: Joi.string().email().required(),
+        password: Joi.string().required(),
+    }).required(),
+    params: Joi.object(),
+    query: Joi.object(),
+});
+
+export const idSchema = Joi.object({
+    body: Joi.object(),
+    params: Joi.object({
+        id: uuid.required(),
+    }),
+    query: Joi.object(),
+});
+
+export const cookbookSchema = Joi.object({
+    body: Joi.object({
+        name: Joi.string().min(2).max(120).required(),
+        description: Joi.string().max(1000).allow('', null),
+    }).required(),
+    params: Joi.object(),
+    query: Joi.object(),
+});
+
+export const cookbookUpdateSchema = Joi.object({
+    body: Joi.object({
+        name: Joi.string().min(2).max(120),
+        description: Joi.string().max(1000).allow('', null),
+    })
+        .min(1)
+        .required(),
+    params: Joi.object({
+        id: uuid.required(),
+    }),
+    query: Joi.object(),
+});
+
+export const memberSchema = Joi.object({
+    body: Joi.object({
+        email: Joi.string().email().required(),
+        role: Joi.string()
+            .valid('EDITOR', 'COMMENTER', 'READER')
+            .required(),
+    }).required(),
+    params: Joi.object({
+        id: uuid.required(),
+    }),
+    query: Joi.object(),
+});
+
+const ingredient = Joi.object({
+    name: Joi.string().required(),
+    quantity: Joi.number().positive().required(),
+    unit: Joi.string().max(30).required(),
+});
+
+const recipeBodySchema = Joi.object({
+    title: Joi.string().min(2).max(150).required(),
+    description: Joi.string().max(2000).allow('', null),
+
+    preparationMinutes: Joi.number()
+        .integer()
+        .min(0)
+        .required(),
+
+    cookingMinutes: Joi.number()
+        .integer()
+        .min(0)
+        .required(),
+
+    servings: Joi.number()
+        .integer()
+        .min(1)
+        .required(),
+
+    imageUrl: Joi.string().uri().allow('', null),
+    sourceUrl: Joi.string().uri().allow('', null),
+
+    ingredients: Joi.array()
+        .items(ingredient)
+        .min(1)
+        .required(),
+
+    steps: Joi.array()
+        .items(Joi.string().min(1))
+        .min(1)
+        .required(),
+
+    tags: Joi.array()
+        .items(Joi.string().max(40))
+        .default([]),
+
+    cookbookId: uuid.allow(null),
+});
+
+export const recipeSchema = Joi.object({
+    body: recipeBodySchema.required(),
+    params: Joi.object(),
+    query: Joi.object(),
+});
+
+const recipeUpdateBodySchema = recipeBodySchema
+    .fork(
+        [
+            'title',
+            'preparationMinutes',
+            'cookingMinutes',
+            'servings',
+            'ingredients',
+            'steps',
+        ],
+        (schema) => schema.optional()
+    )
+    .min(1);
+
+export const recipeUpdateSchema = Joi.object({
+    body: recipeUpdateBodySchema.required(),
+    params: Joi.object({
+        id: uuid.required(),
+    }),
+    query: Joi.object(),
+});
+
+export const commentSchema = Joi.object({
+    body: Joi.object({
+        content: Joi.string()
+            .min(1)
+            .max(2000)
+            .required(),
+    }).required(),
+    params: Joi.object({
+        id: uuid.required(),
+    }),
+    query: Joi.object(),
+});
+
+export const mealPlanSchema = Joi.object({
+    body: Joi.object({
+        plannedFor: Joi.date().iso().required(),
+        mealType: Joi.string().max(50).required(),
+        servings: Joi.number().integer().min(1).required(),
+        notes: Joi.string().max(1000).allow('', null),
+        recipeId: uuid.required(),
+        cookbookId: uuid.allow(null),
+    }).required(),
+    params: Joi.object(),
+    query: Joi.object(),
+});
+
+export const profileSchema = Joi.object({
+    body: Joi.object({
+        displayName: Joi.string().min(2).max(80),
+        dietaryPreferences: Joi.array().items(
+            Joi.string().max(60)
+        ),
+        allergies: Joi.array().items(
+            Joi.string().max(60)
+        ),
+        favoriteCuisines: Joi.array().items(
+            Joi.string().max(60)
+        ),
+        defaultServings: Joi.number()
+            .integer()
+            .min(1)
+            .max(50),
+    })
+        .min(1)
+        .required(),
+    params: Joi.object(),
+    query: Joi.object(),
+});
